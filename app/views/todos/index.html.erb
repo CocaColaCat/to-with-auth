@@ -1,0 +1,46 @@
+<div class="main box">
+  <div class="box todos">
+    <h2 class="box">待办事项</h2>
+    <ul>
+      <% @todos.each do |todo| %>
+        <li>
+          <% if todo.is_finished %>
+            <del><%= todo.title %></del>
+          <% else %>
+            <%= todo.title %>
+          <% end %>
+          <span class="timeinfo"><%= todo.created_at.to_formatted_s(:db) %></span>
+
+          <% if todo.is_finished %>
+            <%= link_to "取消", todo_path(todo.id, todo: {is_finished: false}), method: :patch %>,
+          <% else %>
+            <%= link_to "完成", todo_path(todo.id, todo: {is_finished: true}), method: :patch %>,
+          <% end %>
+
+          <%= link_to "编辑", edit_todo_path(todo.id) %>,
+          <%= link_to "删除", todo_path(todo.id), method: :delete %>
+
+          <!-- http verb: GET POST PATCH DELETE -->
+          <!-- rails actions: get new create destroy show update -->
+          <!-- <a rel="nofollow" data-method="patch" href="/todos/5?todo%5Bis_finished%5D=true">完成</a> -->
+          <!-- <a></a> anchor -->
+          <!-- rails route helper method, model_path, models_path, edit_model_path -->
+          <!--  todo_path(todo.id, todo: {is_finished: true}) -> /todos/5?todo%5Bis_finished%5D=true -->
+        </li>
+      <% end %>
+    </ul>
+  </div>
+
+  <!-- help method -->
+  <!-- html form -->
+  <!-- rails doc: form_for, text_field, submit -->
+  <!-- rails form helper -->
+  <div class="box post">
+    <h2>添加</h2>
+    <%= form_for @todo do |f| %>
+      <p> <%= f.text_field :title, class: 'long_txt' %> </p>
+      <p> <%= f.submit "提交", class: 'submit' %> </p>
+    <% end %>
+  </div>
+
+</div> <!-- main end -->
