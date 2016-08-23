@@ -173,3 +173,120 @@ user = User.last
 user.username
 ```
 完成以上操作如果输出的用户名和你之前注册的用户名一样，那么就说明这个功能完成了。
+
+#### 实现用户登录
+浏览器中打开页面 `http://localhost:3000/users/new` ，点击页面上的链接`已有账号？快来登陆`，这个时候输入框的路由会变成 `http://localhost:3000/login`，同时页面出错
+```
+uninitialized constant SessionsController
+```
+
+这是因为获取登录页面的时候，系统找到了路由，但是没有找到匹配的控制器 `SessionsController`。
+在这里要着重介绍登录功能的实现。一般情况一个控制器会对应一个模型（model），这样的模式相当于资源（模型）和对资源的操作（控制器）。但是登录不需要资源，那么如何知道用户是否登录了呢？
+这可以通过一个叫做 `session` 的对象来保存用户登录的状态。这里的 `session` 可以看成是一个存储器，如果用户成功登陆后，它负责保存用户的 id。这个 `session` 会存在浏览器中。每次浏览器给服务器发送请求的时候，都会把 `session` 中的数据一并传过来。整个过程可以简化为下面的过程
+
+```
+        请求敏感信息（没有 session）
+浏览器 ------------------------> Web 应用（Rails)
+      <-----------------------
+        没有权限，请先登录
+
+
+        登录（传用户名，密码）
+浏览器 ------------------------> Web 应用（Rails)
+      <-----------------------
+        登录成功（返回带有用户 id session 的信息）
+
+
+        请求敏感信息（传送 session）
+浏览器 ------------------------> Web 应用（Rails)
+      <-----------------------
+        验权通过，返回敏感信息
+```
+
+现来创建 SessionsController 控制器。在 terminal 中输入以下命令
+
+```sh
+# 在 terminal 中执行
+rails g controller sessions new create destroy
+```
+
+按照如下代码修改文件 `config/routes.rb`。这是配置登录功能相关的路由
+
+```ruby
+# 文件地址: config/routes.rb
+
+Rails.application.routes.draw do
+  resources :todos
+
+  # 配置 user 资源的路由，只支持 new 和 create
+  resources :users, only: [:new, :create]
+
+  get '/login', to: 'sessions#new'           # 获取登录表路由
+  post '/login', to: 'sessions#create'       # 登录路由
+  delete '/logout', to: 'sessions#destroy'   # 登出路由
+end
+```
+
+这个时候刷新浏览器，页面会变成如下。
+```
+Sessions#new
+
+Find me in app/views/sessions/new.html.erb
+```
+
+但是我们要的是登录表格。所以键入以下登录表格的代码（不到偷懒复制粘贴哟），然后刷新浏览器。如果用之前注册的用户信息去登录是不会成功的，还需要实现 `SessionsController` 的 `create` action。
+```ruby
+<% if flash[:notice] %>
+  <p class="box notice"> <%= flash[:notice] %> </p>
+<% elsif flash[:error] %>
+  <p class="box error"> <%= flash[:error] %> </p>
+<% end %>
+
+<div class="account">
+  <h3>用户登陆</h3>
+  <%= form_tag login_path do |f| %>
+  <p><label>　用户名: </label><%= text_field_tag :username %></p>
+  <p><label>　　密码: </label><%= password_field_tag :password %></p>
+  <p><%= submit_tag "登陆" %></p>
+  <p><%= link_to "还没账号？快来注册", new_user_path %></p>
+  <% end %>
+</div>
+```
+
+更新 `sessions_controller` 中的 `action` 方法。
+```ruby
+# 文件地址: app/controllers/sessions_controller.rb
+
+def create
+  # 通过用户名去数据库中查找用户
+  user = User.find_by(username: params[:username])
+
+  # 如果用户找到，同时密码匹配
+  if user && user.authenticate(params[:password])
+    # 如果成功，则跳转到 login_as 方法，下面会给出实现
+    login_as user
+
+    # 设置登陆成功提示信息，同时跳转到 todos 页面
+    flash[:notice] = "登陆成功"
+    redirect_to todos_path
+  else
+
+    # 登陆不成功，设置出错提示信息，同时渲染登录页面
+    flash[:error] = "用户名或密码错误"
+    render :new
+  end
+end
+```
+
+更新 `application_controller.rb` 文件，添加 login_as 方法。完成以上代码后，如果你能登录并跳转到 todos 页面，那么就说明登录功能完成实现了。
+```ruby
+# 文件地址: app/controllers/application_controller.rb
+
+def login_as(user)
+  # 把当前用户的 id 存在 session 中，session 会被返回给浏览器
+  session[:user_id] = user.id
+
+  # 把 user 的信息赋值给 instance variable（带有 @)，这是为了方便后面引用
+  @current_user = user
+end
+```
