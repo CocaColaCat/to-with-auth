@@ -298,11 +298,11 @@ todo 任务，一个 todo 任务属于一个用户。那么在 todo 表里面就
 **Todos Table**
 
  id | title | remark | user_id
-----|------|----
+----|------|----|----
 1 | 学习 ruby 基础知识 | 完成《ruby 基础》1-7章节 | 1
 2 | 学习 ruby 基础知识 | 完成《ruby 基础》8-11章节 | 1
-3 | 完成 rails tutorial |  | 1
-4 | 学习 Git 和 command line |  | 2
+3 | 完成 rails tutorial  | - | 1
+4 | 学习 Git 和 command line | -  | 2
 5 | 学习 ruby 基础知识 | 完成《ruby 基础》1-7章节 | 2
 
 **Users Table**
