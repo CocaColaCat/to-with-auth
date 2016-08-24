@@ -295,7 +295,7 @@ end
 首先需要修改 todo 的列表页面，只显示当前用户创建的 todo 任务。数据库层层面，表和表数据之前的关联关系是通过外键（foreign key）实现的。比如说用户表和 todo 任务表的关系是用户有多个
 todo 任务，一个 todo 任务属于一个用户。那么在 todo 表里面就保存从属用户 id，因此在获取 todo 任务信息的时候，user id 就能作为索引值在用户表中查找对应的用户信息。
 
-** Todos Table **
+**Todos Table**
 
  id | title | remark | user_id
 ----|------|----
@@ -305,7 +305,7 @@ todo 任务，一个 todo 任务属于一个用户。那么在 todo 表里面就
 4 | 学习 Git 和 command line |  | 2
 5 | 学习 ruby 基础知识 | 完成《ruby 基础》1-7章节 | 2
 
-** Users Table **
+**Users Table**
 
  id | username | password
 ----|------|----
