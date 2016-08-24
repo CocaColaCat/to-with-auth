@@ -290,3 +290,160 @@ def login_as(user)
   @current_user = user
 end
 ```
+
+#### 实现私有 todo list
+首先需要修改 todo 的列表页面，只显示当前用户创建的 todo 任务。数据库层层面，表和表数据之前的关联关系是通过外键（foreign key）实现的。比如说用户表和 todo 任务表的关系是用户有多个
+todo 任务，一个 todo 任务属于一个用户。那么在 todo 表里面就保存从属用户 id，因此在获取 todo 任务信息的时候，user id 就能作为索引值在用户表中查找对应的用户信息。
+
+** Todos Table **
+
+ id | title | remark | user_id
+----|------|----
+1 | 学习 ruby 基础知识 | 完成《ruby 基础》1-7章节 | 1
+2 | 学习 ruby 基础知识 | 完成《ruby 基础》8-11章节 | 1
+3 | 完成 rails tutorial |  | 1
+4 | 学习 Git 和 command line |  | 2
+5 | 学习 ruby 基础知识 | 完成《ruby 基础》1-7章节 | 2
+
+** Users Table **
+
+ id | username | password
+----|------|----
+1 | Lily| ******
+2 | Iris | ******
+3 | 楠 | ******
+4 | 金 | ******
+
+综上，首先要修改 todo 表结构，增加 user_id 栏。这里的 user_id:references 是说把 user_id 作为外键添加到 todo 表结构中。Rails 和数据库会知道怎么做，感兴趣的同学可以
+在搜索一下什么是外键。执行完后记得运行 rake db:migrate。
+```sh
+# 在 terminal 中执行
+rails g migration AddUserToTodos user:references
+```
+
+然后修改 user.rb 和 todo.rb 来定义从属关系（光有外键还不足够，因为这只是在数据库层声明了数据间的关系，但是在 Rails 并不知道）
+
+```ruby
+# 文件地址: app/models/todo.rb
+
+class Todo < ApplicationRecord
+  belongs_to :user
+end
+```
+
+```ruby
+# 文件地址: app/models/user.rb
+
+class User < ApplicationRecord
+  has_secure_password
+
+  has_many :todos
+end
+```
+
+同时还需要修改控制层的代码。这里需要控制 todo 列表的访问权限：只有登录的用户才能访问。按如下代码修改 `TodosController`
+
+```ruby
+# 文件地址: app/controllers/todos_controller.rb
+
+class TodosController < ApplicationController
+  # 定义前置操作，限制此控制器内的 actions 都要执行这个方法：认证用户
+  before_action :authenticate!
+
+  def index
+    # 获取当前用户的 todos
+    @todos = @current_user.todos
+    @todo= Todo.new
+  end
+
+  private
+  def authenticate!
+    # 先通过 session 中的 user_id 来查找用户，同时赋值给实例变量
+    @current_user = User.find_by(id: session[:user_id])
+
+    # 如果没找到用户，那么就重定向到登录页面
+    if @current_user.blank?
+      redirect_to login_path and return
+    end
+  end
+
+end
+```
+
+修改完代码后尝试新添一个 todo，但并不会成功，这是因为新建 todo 没有设置 todo 的 user_id。修改 `TodosController` 中的 `create` 方法如下。
+
+```ruby
+# 文件地址: app/controllers/todos_controller.rb
+
+def create
+  todo = Todo.new(todo_params)
+
+  # 设定 todo 的 user_id 就是当前用户的 id
+  todo.user_id = @current_user.id
+  if todo.save!
+    redirect_to todos_path
+  end
+end
+```
+
+这样就能任意为当前用户添加和删除 todo 任务了。那如何切换用户的 todo 任务呢？答案是登出，然后再登录当前用户。
+
+#### 切换账号
+
+切换账号要求登录的用户可以登出。修改 `application.html.erb`。在这里新增了两个方法 `logined?` 和 `current_user`，后续会解释。
+
+```html
+# 文件地址: app/views/layouts/application.html.erb
+
+<body>
+  <div class="page">
+    <div class="user_info">
+      <% if logined? %>
+        <span class="username"><%= current_user.username %></span> <%= link_to "退出", logout_path, method: :delete %>
+      <% else %>
+        <%= link_to "登陆", login_path %> <%= link_to "注册", new_user_path %>
+      <% end %>
+    </div>
+    <div class="header box">
+      <h1><a href="/">Todo List</a></h1>
+    </div> <!-- header end -->
+
+    <%= yield %>
+
+    <div class="foot">
+      Copyright &copy; <a href="http://codingirls.club" target="_blank">CGC <%= image_tag("rails.png") %></a>
+    </div> <!-- footer end -->
+  </div> <!-- page end -->
+</body>
+```
+
+按照上面的代码键入后，刷新页面会报错。这是因为以上提到的两个方法还没有定义。修改 `ApplicationController` 定义此方法。
+
+```ruby
+# 文件地址: app/controllers/application_controller.rb
+
+class ApplicationController < ActionController::Base
+  protect_from_forgery with: :exception
+
+  # 定义两个 helper 方法，可以在 view 中引用
+  helper_method :current_user, :logined?
+
+  def login_as(user)
+    session[:user_id] = user.id
+    @current_user = user
+  end
+
+  # 如果 current_user 方法返回 nil，则说明没有登录
+  def logined?
+    current_user != nil
+  end
+
+  def current_user
+    @current_user
+  end
+end
+```
+
+修改好后刷新页面会看到顶部多了一个 `登出` 的连接。点击链接跳转到登录页面，然后注册新用户进入到 todo 页面，如果此时新用户的 todo 页面是空空如也，那么就说明切换用户的功能成功实现。
+
+#### 页面美化

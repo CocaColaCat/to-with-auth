@@ -20,6 +20,10 @@ class UsersController < ApplicationController
     end
   end
 
+  def destroy
+    session[:user_id] = nil
+  end
+
   private
   def user_params
     params.require(:user).permit(:username, :password, :password_confirmation)
