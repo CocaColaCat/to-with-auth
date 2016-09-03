@@ -153,7 +153,7 @@ gem 'bcrypt', '~> 3.1.7'
 ```ruby
 # 文件地址: app/models/user.rb
 
-class User < ApplicationRecord
+class User < ActiveRecord::Base
   has_secure_password
 end
 ```
