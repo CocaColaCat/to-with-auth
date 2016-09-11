@@ -1,0 +1,12 @@
+<div class="box post">
+  <!-- 用户注册的表格 -->
+  <div class="account">
+    <h3>上传用户头像</h3>
+    <%= form_for @user, html: { multipart: true } do |f| %>
+      <%= image_tag(@user.avatar_url, width: "200") if @user.avatar? %>
+      <%= f.file_field :avatar %>
+      <%= f.hidden_field :avatar_cache %>
+      <p><%= link_to "取消", todos_path %><%= f.submit "提交" %></p>
+    <% end %>
+  </div>
+</div>

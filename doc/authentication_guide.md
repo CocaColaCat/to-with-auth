@@ -520,3 +520,78 @@ a:hover { color:#FF3300; }
 ```
 
 下载图片 https://github.com/CocaColaCat/to-with-auth/blob/master/app/assets/images/rails.png 并存在 `app/assets/images` 文件目录下。
+
+
+#### 修改用户信息－上传用户头像
+(Gem CarrierWave)[https://github.com/carrierwaveuploader/carrierwave] 提供了图片上传的工具。在 Gemfile 中加入如下
+
+```ruby
+# 文件地址: Gemfile
+
+gem 'carrierwave', '>= 1.0.0.beta', '< 2.0'
+```
+
+然后是创建头像上传类和数据库迁移文件。
+
+```sh
+# 终端运行
+
+rails generate uploader Avatar
+
+rails g migration add_avatar_to_users avatar:string
+rake db:migrate
+```
+
+修改 user.rb，定义图片上传的插件
+
+```ruby
+class User < ActiveRecord::Base
+  # mount 上传插件 AvatarUploader
+  mount_uploader :avatar, AvatarUploader
+end
+```
+
+定义修改用户信息的控制器和 actions。
+```ruby
+# 文件地址: app/controllers/users_controller.rb
+
+def edit
+  @user = User.find(params[:id])
+end
+
+def update
+  @user = User.find(params[:id])
+  @user.update user_params
+  redirect_to todos_path, notice: "头像修改成功"
+end
+
+private
+def user_params
+  params.require(:user).permit(:username, :password, :password_confirmation, :avatar)
+end
+```
+
+定义上传头像的页面
+```ruby
+# 文件地址: app/views/users/edit.html.erb
+
+<div class="box post">
+  <!-- 用户注册的表格 -->
+  <div class="account">
+    <h3>上传用户头像</h3>
+    <%= form_for @user, html: { multipart: true } do |f| %>
+      <%= image_tag(@user.avatar_url, width: "200") if @user.avatar? %>
+      <%= f.file_field :avatar %>
+      <%= f.hidden_field :avatar_cache %>
+      <p><%= link_to "取消", todos_path %><%= f.submit "提交" %></p>
+    <% end %>
+  </div>
+</div>
+```
+
+定义路由
+```ruby
+# 文件地址: config/routes.rb
+
+  resources :users, only: [:new, :create, :edit, :update]
+```
